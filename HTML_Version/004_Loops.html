@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>004 - Loops in ABAP</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 860px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #1f2d3d; background: #f7f9fb; }
+  h1 { color: #0d6efd; border-bottom: 3px solid #0d6efd; padding-bottom: 8px; }
+  h2 { color: #0a58ca; margin-top: 32px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; background: #fff; }
+  th, td { border: 1px solid #d1d9e0; padding: 8px 12px; text-align: left; }
+  th { background: #0d6efd; color: #fff; }
+  tr:nth-child(even) { background: #f0f6fc; }
+  pre { background: #0f172a; color: #dbeafe; padding: 16px; border-radius: 8px; overflow-x: auto; }
+  code { background: #e8f0fe; color: #0d47a1; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .output { background: #fffbe6; border: 1px dashed #e6c200; padding: 12px 16px; border-radius: 6px; font-family: Consolas, monospace; color: #333; }
+  .note { background: #e7f7ee; border-left: 4px solid #20c997; padding: 10px 14px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Loops in ABAP</h1>
+
+<h2>1. Theory</h2>
+
+<h3>What is a Loop?</h3>
+<p>A loop repeats a block of code. In ABAP the common way is <code>DO ... ENDDO</code>. Inside the loop, the special field <code>sy-index</code> tells you <strong>which run number</strong> you are on (starts at 1).</p>
+
+<h3>DO ... TIMES (fixed number of repeats)</h3>
+<pre><code>DO 5 TIMES.
+  WRITE: / 'Run', sy-index.
+ENDDO.</code></pre>
+<p>Prints <code>Run 1</code> up to <code>Run 5</code>.</p>
+
+<h3>DO ... ENDDO with <code>TIMES</code> variable</h3>
+<pre><code>DATA lv_repeat TYPE i.
+lv_repeat = 3.
+DO lv_repeat TIMES.
+  ...
+ENDDO.</code></pre>
+
+<h3>DO WHILE ... ENDDO (repeat while true)</h3>
+<p><code>DO WHILE</code> keeps going <strong>as long as</strong> the condition is true:</p>
+<pre><code>lv_total = 0.
+DO WHILE lv_total &lt; 100.
+  lv_total = lv_total + 20.
+ENDDO.</code></pre>
+<ul>
+  <li>Danger: if the condition never becomes false, the loop runs forever (<strong>infinite loop</strong>). Always make sure something inside changes the condition.</li>
+</ul>
+
+<h3>CONTINUE (skip one run)</h3>
+<p>Jumps to the next repetition straight away, skipping the rest of the current run:</p>
+<pre><code>DO 5 TIMES.
+  IF sy-index = 3.
+    CONTINUE.          " skip number 3
+  ENDIF.
+  WRITE sy-index.
+ENDDO.</code></pre>
+<p>Prints <code>1 2 4 5</code>.</p>
+
+<h3>EXIT (stop the whole loop)</h3>
+<p>Leaves the loop completely, even if more runs remain:</p>
+<pre><code>DO 100 TIMES.
+  IF sy-index &gt; 5.
+    EXIT.
+  ENDIF.
+  WRITE sy-index.
+ENDDO.</code></pre>
+<p>Prints <code>1 2 3 4 5</code> then stops.</p>
+
+<h3>Nested loops</h3>
+<p>A loop inside a loop is fine. Each inner loop has its own <code>sy-index</code>, so track the outer run number with your own variable.</p>
+<pre><code>DATA lv_outer TYPE i.
+lv_outer = 0.
+DO 3 TIMES.
+  lv_outer = lv_outer + 1.
+  DO 2 TIMES.
+    WRITE: / lv_outer, sy-index.
+  ENDDO.
+ENDDO.</code></pre>
+
+<h2>2. Code</h2>
+
+<pre><code>REPORT zloops.
+
+DATA lv_count TYPE i.
+DATA lv_total TYPE i.
+DATA lv_sum   TYPE i.
+DATA lv_age   TYPE i.
+
+WRITE: / '--- DO ... TIMES ---'.
+DO 5 TIMES.
+  WRITE: / 'Loop number', sy-index.
+ENDDO.
+
+WRITE: / '--- DO WHILE ... ENDDO ---'.
+lv_count = 0.
+lv_total = 0.
+DO WHILE lv_total &lt; 100.
+  lv_count = lv_count + 1.
+  lv_total = lv_total + 20.
+ENDDO.
+WRITE: / 'Needed', lv_count, 'steps to reach', lv_total.
+
+WRITE: / '--- DO n ... ENDDO (with condition) ---'.
+lv_sum = 0.
+DO 10 TIMES.
+  IF sy-index MOD 2 = 0.
+    CONTINUE.
+  ENDIF.
+  lv_sum = lv_sum + sy-index.
+ENDDO.
+WRITE: / 'Sum of odd numbers 1..10 =', lv_sum.
+
+WRITE: / '--- EXIT (stop early) ---'.
+DO 100 TIMES.
+  IF sy-index * sy-index &gt; 50.
+    WRITE: / 'First square above 50 is', sy-index * sy-index.
+    EXIT.
+  ENDIF.
+ENDDO.
+
+WRITE: / '--- Nested loops ---'.
+lv_count = 0.
+DO 3 TIMES.
+  lv_count = lv_count + 1.
+  DO 2 TIMES.
+    WRITE: / 'Outer', lv_count, 'Inner', sy-index.
+  ENDDO.
+ENDDO.
+
+WRITE: / '--- Table of multiplication (3 x 10) ---'.
+lv_age = 3.
+DO 10 TIMES.
+  WRITE: / lv_age, 'x', sy-index, '=', lv_age * sy-index.
+ENDDO.</code></pre>
+
+<h3>Output</h3>
+<div class="output">--- DO ... TIMES ---<br>Loop number         1<br>Loop number         2<br>Loop number         3<br>Loop number         4<br>Loop number         5<br>--- DO WHILE ... ENDDO ---<br>Needed          5 steps to reach         100<br>--- DO n ... ENDDO (with condition) ---<br>Sum of odd numbers 1..10 =         25<br>--- EXIT (stop early) ---<br>First square above 50 is         64<br>--- Nested loops ---<br>Outer          1 Inner          1<br>Outer          1 Inner          2<br>Outer          2 Inner          1<br>Outer          2 Inner          2<br>Outer          3 Inner          1<br>Outer          3 Inner          2<br>--- Table of multiplication (3 x 10) ---<br>          3 x          1 =          3<br>          3 x          2 =          6<br>          3 x          3 =          9<br>          3 x          4 =         12<br>          3 x          5 =         15<br>          3 x          6 =         18<br>          3 x          7 =         21<br>          3 x          8 =         24<br>          3 x          9 =         27<br>          3 x         10 =         30</div>
+
+<h3>Line-by-line breakdown</h3>
+<table>
+  <tr><th>Line</th><th>Meaning</th></tr>
+  <tr><td><code>DO 5 TIMES.</code></td><td>Repeats the block exactly 5 times.</td></tr>
+  <tr><td><code>sy-index</code></td><td>Built-in field holding the current run number (1, 2, 3...).</td></tr>
+  <tr><td><code>DO WHILE lv_total &lt; 100.</code></td><td>Repeats only while the total is below 100.</td></tr>
+  <tr><td><code>lv_count = lv_count + 1.</code></td><td>Counts how many runs happened.</td></tr>
+  <tr><td><code>IF sy-index MOD 2 = 0. CONTINUE.</code></td><td>Odd/even check: skips even runs.</td></tr>
+  <tr><td><code>EXIT.</code></td><td>Ends the loop immediately.</td></tr>
+  <tr><td><code>DO 3 TIMES. ... DO 2 TIMES.</code></td><td>Nested loops &mdash; inner index resets each outer run.</td></tr>
+</table>
+
+<h2>3. Practice</h2>
+<ol>
+  <li>Print the numbers from <strong>1 to 20</strong> using <code>DO 20 TIMES</code> and <code>sy-index</code>.</li>
+  <li>Print the <strong>even numbers</strong> from 2 to 20 only (hint: <code>MOD</code> + <code>CONTINUE</code>).</li>
+  <li>Use a <code>DO WHILE</code> loop to add <code>7</code> over and over until the total passes <code>100</code>, then print how many additions it took.</li>
+  <li>Print a multiplication table for <strong>7</strong> (from <code>7 x 1</code> to <code>7 x 10</code>).</li>
+</ol>
+<pre><code>DATA lv_n TYPE i.
+lv_n = 1.
+DO WHILE lv_n &lt;= 10.
+  WRITE: / lv_n, 'squared =', lv_n * lv_n.
+  lv_n = lv_n + 1.
+ENDDO.</code></pre>
+
+<div style="margin-top:40px; border-top:1px solid #d1d9e0; padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+  <a href="003_Operators_and_Conditions.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">&larr; Previous: Operators</a>
+  <a href="005_Internal_Tables.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">Next: Internal Tables &rarr;</a>
+</div>
+
+</body>
+</html>

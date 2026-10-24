@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>001 - Hello World in ABAP</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 860px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #1f2d3d; background: #f7f9fb; }
+  h1 { color: #0d6efd; border-bottom: 3px solid #0d6efd; padding-bottom: 8px; }
+  h2 { color: #0a58ca; margin-top: 32px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; background: #fff; }
+  th, td { border: 1px solid #d1d9e0; padding: 8px 12px; text-align: left; }
+  th { background: #0d6efd; color: #fff; }
+  tr:nth-child(even) { background: #f0f6fc; }
+  pre { background: #0f172a; color: #dbeafe; padding: 16px; border-radius: 8px; overflow-x: auto; }
+  code { background: #e8f0fe; color: #0d47a1; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .output { background: #fffbe6; border: 1px dashed #e6c200; padding: 12px 16px; border-radius: 6px; font-family: Consolas, monospace; color: #333; }
+  .note { background: #e7f7ee; border-left: 4px solid #20c997; padding: 10px 14px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Hello World in ABAP — Tutorial</h1>
+
+<h2>1. Theory</h2>
+
+<h3>What is ABAP?</h3>
+<p><strong>ABAP</strong> (<em>Advanced Business Application Programming</em>) is SAP's own programming language. It is used to build business applications that run on SAP systems, such as ERP, S/4HANA, and BTP (Business Technology Platform).</p>
+
+<h3>Key Concepts of an ABAP Report</h3>
+<ol>
+  <li>
+    <strong>REPORT Statement</strong> — Every executable ABAP program (called a <em>report</em>) begins with the <code>REPORT</code> keyword.
+    <ul>
+      <li>Syntax: <code>REPORT &lt;name&gt;.</code></li>
+      <li>The name <strong>must start with a letter</strong> and is conventionally prefixed with <code>Z</code> to mark it as a <em>customer development</em> (SAP reserves names starting with <code>A</code>&ndash;<code>Y</code> for standard objects, so user programs use <code>Z</code>).</li>
+    </ul>
+  </li>
+  <li>
+    <strong>WRITE Statement</strong> — <code>WRITE</code> is the ABAP command used to <strong>output text to the screen</strong> (the output list).
+    <ul>
+      <li>Similar to <code>PRINT</code> in Python or <code>console.log</code> in JavaScript.</li>
+      <li>Text is enclosed in single quotes <code>'...'</code>.</li>
+    </ul>
+  </li>
+  <li>
+    <strong>Statements &amp; Periods</strong> — Every ABAP statement <strong>ends with a period</strong> <code>.</code> — this is essential.
+    <ul>
+      <li>ABAP is not case-sensitive: <code>REPORT zhello_world.</code> and <code>report ZHELLO_WORLD.</code> are identical.</li>
+    </ul>
+  </li>
+  <li>
+    <strong>Why "Z" in the Name?</strong> — SAP guarantees all standard objects live in the <code>A</code>&ndash;<code>Y</code> name range. Names beginning with <code>Z</code> are reserved for customer programs, so your code never clashes with SAP's.
+  </li>
+</ol>
+
+<h3>Output List (ALV / Basic List)</h3>
+<p>In older ABAP, <code>WRITE</code> sends output to a simple list. Every <code>WRITE</code> adds another line/column to this list:</p>
+<ul>
+  <li><code>WRITE: 'Hello, World!'.</code> prints the literal text.</li>
+  <li>Add a <code>/</code> at the start to force a <strong>new line</strong>: <code>WRITE: / 'Hello, World!'.</code></li>
+</ul>
+
+<h2>2. Code</h2>
+<p>The simplest possible ABAP program:</p>
+
+<pre><code>REPORT zhello_world.
+
+WRITE: 'Hello, World!'.</code></pre>
+
+<h3>Line-by-line breakdown</h3>
+<table>
+  <tr><th>Line</th><th>Meaning</th></tr>
+  <tr><td><code>REPORT zhello_world.</code></td><td>Declares an executable report named <code>zhello_world</code>.</td></tr>
+  <tr><td><code>WRITE: 'Hello, World!'.</code></td><td>Writes the text <code>Hello, World!</code> to the output screen.</td></tr>
+</table>
+
+<h3>How to run it</h3>
+<ol>
+  <li>Log in to SAP GUI (or access BTP ABAP environment).</li>
+  <li>Go to transaction <strong>SE38</strong> (ABAP Editor).</li>
+  <li>Enter <code>ZHELLO_WORLD</code> as the program name and click <strong>Create</strong>.</li>
+  <li>Paste the code and <strong>Save</strong> (Ctrl+S) — choose a package or the <code>$TMP</code> local package.</li>
+  <li>Click <strong>Activate</strong> (Ctrl+F3) to make the program executable.</li>
+  <li>Click <strong>Execute</strong> (F8) to run it and see <code>Hello, World!</code> on the screen.</li>
+</ol>
+
+<h2>3. Practice</h2>
+<p>Try changing the output:</p>
+<pre><code>REPORT zhello_world.
+
+WRITE: 'Welcome to ABAP!'.
+WRITE: / 'Line 1'.
+WRITE: / 'Line 2'.</code></pre>
+
+<div style="margin-top:40px; border-top:1px solid #d1d9e0; padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+  <span style="font-weight:bold; color:#68778d;">&larr; Previous</span>
+  <a href="002_Variables.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">Next: Variables &amp; Data Types &rarr;</a>
+</div>
+
+</body>
+</html>

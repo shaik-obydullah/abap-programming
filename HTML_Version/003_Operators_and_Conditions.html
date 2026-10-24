@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>003 - Operators &amp; Conditions in ABAP</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 860px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #1f2d3d; background: #f7f9fb; }
+  h1 { color: #0d6efd; border-bottom: 3px solid #0d6efd; padding-bottom: 8px; }
+  h2 { color: #0a58ca; margin-top: 32px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; background: #fff; }
+  th, td { border: 1px solid #d1d9e0; padding: 8px 12px; text-align: left; }
+  th { background: #0d6efd; color: #fff; }
+  tr:nth-child(even) { background: #f0f6fc; }
+  pre { background: #0f172a; color: #dbeafe; padding: 16px; border-radius: 8px; overflow-x: auto; }
+  code { background: #e8f0fe; color: #0d47a1; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .output { background: #fffbe6; border: 1px dashed #e6c200; padding: 12px 16px; border-radius: 6px; font-family: Consolas, monospace; color: #333; }
+  .note { background: #e7f7ee; border-left: 4px solid #20c997; padding: 10px 14px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Operators &amp; Conditions in ABAP</h1>
+
+<h2>1. Theory</h2>
+
+<h3>Arithmetic Operators</h3>
+<p>ABAP supports the standard math operators. They work on <code>i</code>, <code>p</code>, <code>f</code> types.</p>
+<table>
+  <tr><th>Operator</th><th>Meaning</th><th>Example</th><th>Result</th></tr>
+  <tr><td><code>+</code></td><td>addition</td><td><code>5 + 2</code></td><td><code>7</code></td></tr>
+  <tr><td><code>-</code></td><td>subtraction</td><td><code>5 - 2</code></td><td><code>3</code></td></tr>
+  <tr><td><code>*</code></td><td>multiplication</td><td><code>5 * 2</code></td><td><code>10</code></td></tr>
+  <tr><td><code>/</code></td><td>division</td><td><code>5 / 2</code></td><td><code>2.5</code></td></tr>
+  <tr><td><code>DIV</code></td><td>integer division</td><td><code>5 DIV 2</code></td><td><code>2</code></td></tr>
+  <tr><td><code>MOD</code></td><td>remainder</td><td><code>5 MOD 2</code></td><td><code>1</code></td></tr>
+  <tr><td><code>**</code></td><td>exponent</td><td><code>2 ** 3</code></td><td><code>8</code></td></tr>
+</table>
+
+<pre><code>DATA lv_result TYPE i.
+lv_result = 10 + 5.     " 15
+lv_result = (10 - 3) * 2. " 14
+lv_result = 17 DIV 5.   " 3
+lv_result = 17 MOD 5.   " 2</code></pre>
+
+<h3>Comparison Operators</h3>
+<p>Used to compare values; the result is always <strong>true</strong> or <strong>false</strong>.</p>
+<table>
+  <tr><th>Operator</th><th>Alternative</th><th>Meaning</th></tr>
+  <tr><td><code>=</code></td><td><code>EQ</code></td><td>equal</td></tr>
+  <tr><td><code>&lt;&gt;</code></td><td><code>NE</code></td><td>not equal</td></tr>
+  <tr><td><code>&lt;</code></td><td><code>LT</code></td><td>less than</td></tr>
+  <tr><td><code>&gt;</code></td><td><code>GT</code></td><td>greater than</td></tr>
+  <tr><td><code>&lt;=</code></td><td><code>LE</code></td><td>less than or equal</td></tr>
+  <tr><td><code>&gt;=</code></td><td><code>GE</code></td><td>greater than or equal</td></tr>
+</table>
+<p>For text there are also <code>CP</code> (contains pattern), <code>CO</code>, <code>CS</code> (contains string), <code>CA</code>, etc.</p>
+
+<h3>Logical Operators (AND / OR / NOT)</h3>
+<p>Combine multiple comparisons:</p>
+<pre><code>IF lv_age >= 18 AND lv_age <= 60.
+  WRITE 'Adult working age'.
+ENDIF.
+
+IF lv_grade = 'A' OR lv_grade = 'B'.
+  WRITE 'Passed with merit'.
+ENDIF.
+
+IF NOT lv_flag = abap_true.
+  WRITE 'Flag is off'.
+ENDIF.</code></pre>
+
+<h3>IF / ELSEIF / ELSE</h3>
+<p>The most common way to branch your code:</p>
+<pre><code>IF lv_score >= 90.
+  WRITE 'Grade: A'.
+ELSEIF lv_score >= 75.
+  WRITE 'Grade: B'.
+ELSEIF lv_score >= 50.
+  WRITE 'Grade: C'.
+ELSE.
+  WRITE 'Grade: F'.
+ENDIF.</code></pre>
+<ul>
+  <li><code>IF</code> must always end with <strong><code>ENDIF</code></strong>.</li>
+  <li><code>ELSEIF</code> chains more conditions (only checked if previous ones were false).</li>
+  <li><code>ELSE</code> catches everything else.</li>
+</ul>
+
+<h3>CASE / WHEN</h3>
+<p>Use <code>CASE</code> when you compare one variable against many specific values:</p>
+<pre><code>CASE lv_day.
+  WHEN 'MON'.          WRITE 'Start of week'.
+  WHEN 'FRI'.          WRITE 'Almost weekend!'.
+  WHEN 'SAT' OR 'SUN'. WRITE 'Weekend'.
+  WHEN OTHERS.         WRITE 'Normal day'.
+ENDCASE.</code></pre>
+<ul>
+  <li><code>CASE</code> ends with <strong><code>ENDCASE</code></strong>.</li>
+  <li><code>WHEN OTHERS</code> is the fallback (like <code>ELSE</code>).</li>
+</ul>
+
+<h3>IF vs CASE — which to use?</h3>
+<ul>
+  <li><strong>IF</strong> &rarr; ranges, multiple conditions, AND/OR combinations.</li>
+  <li><strong>CASE</strong> &rarr; exact equality against a fixed list of values.</li>
+</ul>
+
+<h3>String Concatenation (joining text)</h3>
+<p>Use <code>&amp;&amp;</code> to join strings together:</p>
+<pre><code>DATA lv_first TYPE string.
+DATA lv_last  TYPE string.
+DATA lv_full  TYPE string.
+
+lv_first = 'Shaik'.
+lv_last  = 'Obydullah'.
+lv_full  = lv_first && ' ' && lv_last.
+
+WRITE lv_full.  " Shaik Obydullah</code></pre>
+
+<h2>2. Code</h2>
+
+<pre><code>REPORT zoperators.
+
+DATA lv_score TYPE i.
+DATA lv_total TYPE p DECIMALS 2.
+DATA lv_day   TYPE string.
+DATA lv_name  TYPE string.
+
+lv_score = 82.
+lv_total = 100.
+lv_day   = 'SAT'.
+lv_name  = 'ALICE'.
+
+WRITE: / 'Score is', lv_score.
+
+IF lv_score >= 90.
+  WRITE: / 'Grade: A'.
+ELSEIF lv_score >= 75.
+  WRITE: / 'Grade: B'.
+ELSE.
+  WRITE: / 'Grade: C or lower'.
+ENDIF.
+
+WRITE: / '  10 + 5  =', 10 + 5.
+WRITE: / '  10 / 3  =', 10 / 3.
+WRITE: / '  10 DIV 3 =', 10 DIV 3.
+WRITE: / '  10 MOD 3 =', 10 MOD 3.
+WRITE: / '  20% tax  =', lv_total * 20 / 100.
+
+CASE lv_day.
+  WHEN 'MON'.            WRITE: / 'Start of week'.
+  WHEN 'FRI'.            WRITE: / 'Almost weekend!'.
+  WHEN 'SAT' OR 'SUN'.   WRITE: / 'Weekend!'.
+  WHEN OTHERS.           WRITE: / 'Normal day'.
+ENDCASE.
+
+lv_name = lv_name && '_CUSTOMER'.
+WRITE: / 'Name is', lv_name.</code></pre>
+
+<h3>Output</h3>
+<div class="output">Score is        82<br>Grade: B<br>  10 + 5  =        15<br>  10 / 3  =  3.3333333333333333<br>  10 DIV 3 =         3<br>  10 MOD 3 =         1<br>  20% tax  =        20<br>Weekend!<br>Name is ALICE_CUSTOMER</div>
+
+<h3>Line-by-line breakdown</h3>
+<table>
+  <tr><th>Line</th><th>Meaning</th></tr>
+  <tr><td><code>DATA lv_total TYPE p DECIMALS 2.</code></td><td>Decimal type for money/percent calculations.</td></tr>
+  <tr><td><code>IF lv_score &gt;= 75.</code></td><td>Branches based on a comparison.</td></tr>
+  <tr><td><code>10 / 3</code></td><td>Normal division keeps all decimals.</td></tr>
+  <tr><td><code>10 DIV 3</code></td><td>Integer division drops the remainder.</td></tr>
+  <tr><td><code>10 MOD 3</code></td><td>Returns only the remainder (<code>10 / 3 = 3</code> remainder <code>1</code>).</td></tr>
+  <tr><td><code>WHEN 'SAT' OR 'SUN'.</code></td><td>One <code>WHEN</code> branch can match several values.</td></tr>
+  <tr><td><code>lv_name = lv_name &amp;&amp; '_CUSTOMER'.</code></td><td>Appends text using the <code>&amp;&amp;</code> operator.</td></tr>
+</table>
+
+<h2>3. Practice</h2>
+<ol>
+  <li>Ask the user for a number stored in <code>lv_num</code> and print whether it is <strong>even or odd</strong> (use <code>MOD</code>).</li>
+  <li>Write a <code>CASE</code> that prints a message for your week's days.</li>
+  <li>Combine your name and city into one string with <code>&amp;&amp;</code>:</li>
+</ol>
+<pre><code>DATA lv_num TYPE i.
+lv_num = 7.
+
+IF lv_num MOD 2 = 0.
+  WRITE: / 'Even'.
+ELSE.
+  WRITE: / 'Odd'.
+ENDIF.</code></pre>
+
+<div style="margin-top:40px; border-top:1px solid #d1d9e0; padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+  <a href="002_Variables.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">&larr; Previous: Variables</a>
+  <a href="004_Loops.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">Next: Loops &rarr;</a>
+</div>
+
+</body>
+</html>

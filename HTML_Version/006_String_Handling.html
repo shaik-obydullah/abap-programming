@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>006 - String Handling in ABAP</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 860px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #1f2d3d; background: #f7f9fb; }
+  h1 { color: #0d6efd; border-bottom: 3px solid #0d6efd; padding-bottom: 8px; }
+  h2 { color: #0a58ca; margin-top: 32px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; background: #fff; }
+  th, td { border: 1px solid #d1d9e0; padding: 8px 12px; text-align: left; }
+  th { background: #0d6efd; color: #fff; }
+  tr:nth-child(even) { background: #f0f6fc; }
+  pre { background: #0f172a; color: #dbeafe; padding: 16px; border-radius: 8px; overflow-x: auto; }
+  code { background: #e8f0fe; color: #0d47a1; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .output { background: #fffbe6; border: 1px dashed #e6c200; padding: 12px 16px; border-radius: 6px; font-family: Consolas, monospace; color: #333; }
+  .note { background: #e7f7ee; border-left: 4px solid #20c997; padding: 10px 14px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>String Handling in ABAP</h1>
+
+<h2>1. Theory</h2>
+
+<h3>Recap: Types of Text</h3>
+<p>From lesson 002, ABAP has two text types:</p>
+<ul>
+  <li><code>TYPE string</code> &mdash; variable-length text, grows as needed.</li>
+  <li><code>TYPE c LENGTH n</code> &mdash; fixed-length text, always <code>n</code> chars (padded with spaces).</li>
+</ul>
+<p>Most string commands work on both.</p>
+
+<h3>Length &mdash; <code>strlen( )</code></h3>
+<p>Returns how many characters the string contains:</p>
+<pre><code>DATA lv_text TYPE string.
+lv_text = 'Hello'.
+WRITE: / strlen( lv_text ).   " 5</code></pre>
+
+<h3>Change Case &mdash; <code>TRANSLATE ... TO UPPER / LOWER CASE</code></h3>
+<pre><code>TRANSLATE lv_text TO UPPER CASE.   " hello -&gt; HELLO
+TRANSLATE lv_text TO LOWER CASE.   " HELLO -&gt; hello</code></pre>
+
+<h3>Trim &amp; Collapse Spaces &mdash; <code>CONDENSE</code></h3>
+<p>Removes leading/trailing spaces. By default also squeezes multiple middle spaces into one:</p>
+<pre><code>lv_text = '   a   b   '.
+CONDENSE lv_text.            " 'a b'
+CONDENSE lv_text NO-GAPS.    " 'ab'  (removes every space)</code></pre>
+
+<h3>Grab Part of a String &mdash; offset/length <code>+off(len)</code></h3>
+<p>ABAP extracts a substring with a <em>slice</em> notation:</p>
+<pre><code>lv_text   = 'Hello SAP'.
+lv_result = lv_text+0(5).   " first 5 chars -&gt; 'Hello'
+lv_result = lv_text+6(3).   " from char 7, 3 chars -&gt; 'SAP'</code></pre>
+<p>Position 0 is the first character. The syntax is <code>text+offset(length)</code>.</p>
+
+<h3>Search &mdash; <code>FIND ... IN</code></h3>
+<p><code>FIND</code> sets <code>sy-subrc = 0</code> if the text was found:</p>
+<pre><code>FIND 'SAP' IN lv_text.
+IF sy-subrc = 0.
+  WRITE 'Found'.
+ENDIF.
+
+FIND FIRST OCCURRENCE OF 'SAP' IN lv_text MATCH OFFSET lv_pos.
+" lv_pos = 0-based position where 'SAP' starts</code></pre>
+
+<h3>Replace &mdash; <code>REPLACE ... IN ... WITH ...</code></h3>
+<pre><code>REPLACE 'SAP' IN lv_text WITH 'ABAP'.
+REPLACE FIRST OCCURRENCE OF 'x' IN lv_text WITH 'y'.</code></pre>
+
+<h3>Split &mdash; <code>SPLIT ... AT ...</code></h3>
+<p>Cuts a string into pieces. Pieces can go into separate variables or into an internal table:</p>
+<pre><code>SPLIT 'Shaik Obydullah' AT ' ' INTO lv_first lv_last.
+
+DATA lt_words TYPE TABLE OF string.
+SPLIT lv_text AT ' ' INTO TABLE lt_words.</code></pre>
+
+<h3>String Comparison Operators</h3>
+<p>Text versions of the comparison operators are very useful:</p>
+<table>
+  <tr><th>Operator</th><th>Meaning</th><th>Example</th></tr>
+  <tr><td><code>CS</code></td><td>contains <strong>s</strong>tring</td><td><code>IF text CS 'SAP'</code></td></tr>
+  <tr><td><code>NS</code></td><td><strong>n</strong>ot contains string</td><td><code>IF text NS 'X'</code></td></tr>
+  <tr><td><code>CP</code></td><td>contains <strong>p</strong>attern (<code>*</code>,<code>+</code>)</td><td><code>IF text CP 'A*'</code></td></tr>
+  <tr><td><code>NP</code></td><td>not contains pattern</td><td>&nbsp;</td></tr>
+  <tr><td><code>CO</code></td><td>contains <strong>o</strong>nly these chars</td><td><code>IF text CO 'ABC123'</code></td></tr>
+  <tr><td><code>CA</code></td><td>contains <strong>a</strong>ny of these chars</td><td><code>IF text CA '0123'</code></td></tr>
+  <tr><td><code>NA</code></td><td>not contains any</td><td>&nbsp;</td></tr>
+</table>
+<p>For exact match you can write <code>text = 'SAP'</code> (or <code>text EQ 'SAP'</code>).</p>
+
+<h2>2. Code</h2>
+
+<pre><code>REPORT zstrings.
+
+DATA lv_text   TYPE string.
+DATA lv_result TYPE string.
+DATA lv_pos    TYPE i.
+DATA lt_words  TYPE TABLE OF string.
+DATA lv_word   TYPE string.
+
+lv_text = 'Hello SAP World 2026'.
+
+WRITE: / '--- Basics ---'.
+WRITE: / 'Text   :', lv_text.
+WRITE: / 'Length :', strlen( lv_text ).
+WRITE: / 'First 5 chars:', lv_text+0(5).
+
+lv_result = lv_text.
+TRANSLATE lv_result TO UPPER CASE.
+WRITE: / 'UPPER  :', lv_result.
+
+TRANSLATE lv_result TO LOWER CASE.
+WRITE: / 'lower  :', lv_result.
+
+CONDENSE lv_text.
+WRITE: / 'Trimmed:', lv_text.
+
+WRITE: / '--- Search &amp; Replace ---'.
+FIND 'SAP' IN lv_text.
+IF sy-subrc = 0.
+  WRITE: / 'Contains SAP'.
+ENDIF.
+
+FIND FIRST OCCURRENCE OF 'World' IN lv_text MATCH OFFSET lv_pos.
+WRITE: / 'World starts at position', lv_pos.
+
+REPLACE 'SAP' IN lv_text WITH 'ABAP'.
+WRITE: / 'After replace:', lv_text.
+
+WRITE: / '--- Split into words ---'.
+REPLACE '2026' IN lv_text WITH '2026 lesson'.
+SPLIT lv_text AT ' ' INTO TABLE lt_words.
+LOOP AT lt_words INTO lv_word.
+  WRITE: / 'Word:', lv_word.
+ENDLOOP.
+
+WRITE: / '--- String comparisons ---'.
+IF lv_text CS 'ABAP'.
+  WRITE: / 'Contains (CS) ABAP'.
+ENDIF.
+
+IF lv_text CO 'ABCDEFGHIJKLMNOPQRSTUVWXYZ '.
+  WRITE: / 'Only letters and spaces (CO)'.
+ELSE.
+  WRITE: / 'Has digits too (CO fails)'.
+ENDIF.</code></pre>
+
+<h3>Output</h3>
+<div class="output">--- Basics ---<br>Text   :Hello SAP World 2026<br>Length :        21<br>First 5 chars:Hello<br>UPPER  :HELLO SAP WORLD 2026<br>lower  :hello sap world 2026<br>Trimmed:Hello SAP World 2026<br>--- Search &amp; Replace ---<br>Contains SAP<br>World starts at position        11<br>After replace:Hello ABAP World 2026<br>--- Split into words ---<br>Word:Hello<br>Word:ABAP<br>Word:World<br>Word:2026<br>Word:lesson<br>--- String comparisons ---<br>Contains (CS) ABAP<br>Has digits too (CO fails)</div>
+
+<h3>Line-by-line breakdown</h3>
+<table>
+  <tr><th>Line</th><th>Meaning</th></tr>
+  <tr><td><code>strlen( lv_text )</code></td><td>Returns the number of characters.</td></tr>
+  <tr><td><code>lv_text+0(5)</code></td><td>Slice: characters from offset 0, length 5.</td></tr>
+  <tr><td><code>TRANSLATE lv_result TO UPPER CASE.</code></td><td>Converts every letter to uppercase.</td></tr>
+  <tr><td><code>CONDENSE lv_text.</code></td><td>Removes leading/trailing spaces and collapses runs of spaces.</td></tr>
+  <tr><td><code>FIND 'SAP' IN lv_text.</code></td><td>Checks if the text is present; <code>sy-subrc = 0</code> means found.</td></tr>
+  <tr><td><code>... MATCH OFFSET lv_pos.</code></td><td>Also hands back where the match starts (0 = first character).</td></tr>
+  <tr><td><code>REPLACE 'SAP' ... WITH 'ABAP'.</code></td><td>Swaps the first occurrence of <code>SAP</code> for <code>ABAP</code>.</td></tr>
+  <tr><td><code>SPLIT lv_text AT ' ' INTO TABLE lt_words.</code></td><td>Cuts the text at every space, filling an internal table.</td></tr>
+  <tr><td><code>IF lv_text CS 'ABAP'.</code></td><td>True when the text <em>contains</em> the string <code>ABAP</code>.</td></tr>
+  <tr><td><code>IF lv_text CO 'ABC ... Z '.</code></td><td>True only if every character is a letter or space &mdash; digits break it.</td></tr>
+</table>
+
+<h2>3. Practice</h2>
+<ol>
+  <li>Split <code>'Shaik Obydullah'</code> into first name and last name and print each.</li>
+  <li>Find the position of the first <code>o</code> in <code>'Hello World'</code> and print it (use <code>FIND</code> + <code>MATCH OFFSET</code>).</li>
+  <li>Count how many words are in a sentence using <code>SPLIT ... INTO TABLE</code> and <code>lines( )</code>.</li>
+  <li>Take a word, convert it to uppercase, and check with <code>CO</code> whether it contains only letters.</li>
+</ol>
+<pre><code>DATA lv_full TYPE string.
+DATA lv_first TYPE string.
+DATA lv_last  TYPE string.
+
+lv_full = 'Shaik Obydullah'.
+SPLIT lv_full AT ' ' INTO lv_first lv_last.
+WRITE: / 'First:', lv_first.
+WRITE: / 'Last :', lv_last.</code></pre>
+
+<div style="margin-top:40px; border-top:1px solid #d1d9e0; padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+  <a href="005_Internal_Tables.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">&larr; Previous: Internal Tables</a>
+  <a href="007_Open_SQL.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">Next: SQL (Open SQL) &rarr;</a>
+</div>
+
+</body>
+</html>

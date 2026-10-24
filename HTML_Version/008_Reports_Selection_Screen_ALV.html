@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>008 - Selection Screens &amp; ALV Reports</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 860px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #1f2d3d; background: #f7f9fb; }
+  h1 { color: #0d6efd; border-bottom: 3px solid #0d6efd; padding-bottom: 8px; }
+  h2 { color: #0a58ca; margin-top: 32px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; background: #fff; }
+  th, td { border: 1px solid #d1d9e0; padding: 8px 12px; text-align: left; }
+  th { background: #0d6efd; color: #fff; }
+  tr:nth-child(even) { background: #f0f6fc; }
+  pre { background: #0f172a; color: #dbeafe; padding: 16px; border-radius: 8px; overflow-x: auto; }
+  code { background: #e8f0fe; color: #0d47a1; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .output { background: #fffbe6; border: 1px dashed #e6c200; padding: 12px 16px; border-radius: 6px; font-family: Consolas, monospace; color: #333; }
+  .note { background: #e7f7ee; border-left: 4px solid #20c997; padding: 10px 14px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Selection Screens &amp; ALV Reports in ABAP</h1>
+
+<h2>1. Theory</h2>
+
+<p>This lesson is the big one: it combines <strong>user input + database + formatted output</strong> into a complete custom report. You now know internal tables (005) and Open SQL (007) &mdash; here you learn how the user drives the report.</p>
+
+<h3>What is a Selection Screen?</h3>
+<p>Every executable report shows an <strong>input screen</strong> before the logic runs. The user enters criteria, presses <strong>Execute (F8)</strong>, and only then does your <code>SELECT</code>/<code>WRITE</code> code run.</p>
+<p>Two statements create the input fields:</p>
+
+<h3>PARAMETERS &mdash; a single input field</h3>
+<pre><code>PARAMETERS p_city TYPE c LENGTH 20 DEFAULT 'FRANKFURT'.
+PARAMETERS p_top  TYPE i DEFAULT 10.
+PARAMETERS p_asc  AS CHECKBOX.</code></pre>
+<ul>
+  <li><code>TYPE</code> &rarr; the data type of the value.</li>
+  <li><code>DEFAULT</code> &rarr; pre-filled value the user can change.</li>
+  <li><code>AS CHECKBOX</code> &rarr; a tick-box storing <code>abap_true</code>/<code>abap_false</code>.</li>
+  <li><code>OBLIGATORY</code> &rarr; value must not be empty.</li>
+  <li>For radio buttons: <code>RADIOBUTTON GROUP grp1</code>.</li>
+</ul>
+
+<h3>SELECT-OPTIONS &mdash; a range / multi-value field</h3>
+<pre><code>SELECT-OPTIONS s_car FOR spfli-carrid.</code></pre>
+<p>A selection screen table where the user can enter:</p>
+<ul>
+  <li>a <strong>single value</strong> (<code>LH</code>),</li>
+  <li>a <strong>range</strong> (<code>low = 400</code>, <code>high = 500</code>),</li>
+  <li>several rows, and/or</li>
+  <li><strong>excluded</strong> values (green/red traffic light icons).</li>
+</ul>
+<p>Internally it is a little table with columns <code>SIGN</code>, <code>OPTION</code>, <code>LOW</code>, <code>HIGH</code>. You rarely touch those &mdash; you feed it straight into <code>WHERE ... IN</code>:</p>
+<pre><code>WHERE carrid IN s_car.</code></pre>
+<p>The <code>IN</code> handles all the sign/option logic for you.</p>
+<div class="note">Old ABAP first declares the table with <code>TABLES spfli.</code> so <code>s_car FOR spfli-carrid</code> resolves. It still works and is used below.</div>
+
+<h3>Basic flow of a report</h3>
+<pre><code>Selection screen (user input)
+        |
+        v
+SELECT ... INTO an internal table    (lesson 007)
+        |
+        v
+Process / sort / trim the data       (lessons 005, 009-style logic)
+        |
+        v
+Display: basic list (WRITE) or ALV grid</code></pre>
+
+<h3>Display options</h3>
+<ol>
+  <li><strong>Basic list</strong> &mdash; <code>WRITE</code> lines. Simple but plain: no sorting, no totals, no export.</li>
+  <li><strong>ALV (ABAP List Viewer)</strong> &mdash; the standard grid SAP users expect: column headings, sorting, filtering, totals, download to Excel, highlight colors.</li>
+</ol>
+
+<h3>Classic ALV &mdash; <code>REUSE_ALV_GRID_DISPLAY</code></h3>
+<p>Works in every SAP system and compiles even in older releases:</p>
+<pre><code>CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+  EXPORTING
+    i_structure_name = 'SPFLI'
+  TABLES
+    t_outtab         = lt_flights.</code></pre>
+<ul>
+  <li><code>i_structure_name</code> = name of a DDIC structure/table; ALV builds the <strong>field catalog</strong> (column list) from it.</li>
+  <li><code>t_outtab</code> = the internal table holding your data.</li>
+</ul>
+
+<h3>Modern ALV &mdash; SALV (object-oriented)</h3>
+<p>The newer, cleaner way; the <code>TABLE OF</code> type is enough, no structure name needed:</p>
+<pre><code>DATA lo_alv TYPE REF TO cl_salv_table.
+cl_salv_table=&gt;factory(
+  IMPORTING
+    r_salv_table = lo_alv
+  CHANGING
+    t_table      = lt_flights ).
+lo_alv-&gt;display( ).</code></pre>
+<p><strong>Which one?</strong> For new code SAP recommends SALV. This lesson shows the classic function module because it is everywhere in existing systems and is the minimum to produce a real report.</p>
+
+<h2>2. Code</h2>
+
+<pre><code>REPORT zreport_flights.
+
+TABLES: spfli.
+
+PARAMETERS: p_city TYPE spfli-cityfrom DEFAULT 'FRANKFURT',
+            p_top  TYPE i DEFAULT 10,
+            p_asc  AS CHECKBOX.
+SELECT-OPTIONS: s_car FOR spfli-carrid.
+
+DATA lt_flights TYPE TABLE OF spfli.
+DATA ls_flight  TYPE spfli.
+
+SELECT * FROM spfli
+       INTO TABLE lt_flights
+       WHERE carrid IN s_car
+         AND cityfrom = p_city.
+
+IF sy-subrc &lt;&gt; 0.
+  WRITE: / 'No flights found for the selected criteria.'.
+  EXIT.
+ENDIF.
+
+IF p_asc = abap_true.
+  SORT lt_flights BY distance ASCENDING.
+ELSE.
+  SORT lt_flights BY distance DESCENDING.
+ENDIF.
+
+IF lines( lt_flights ) &gt; p_top.
+  DELETE lt_flights TO p_top.
+ENDIF.
+
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+  EXPORTING
+    i_structure_name = 'SPFLI'
+  TABLES
+    t_outtab         = lt_flights.</code></pre>
+
+<h3>What happens when you run it (F8)</h3>
+<ol>
+  <li>A <strong>selection screen</strong> appears: one field for city (pre-filled <code>FRANKFURT</code>), one numeric field (top N), a checkbox "p_asc", and the multi-value carrier selection.</li>
+  <li>Press <strong>Execute</strong> &rarr; the report reads the flights matching your criteria into <code>lt_flights</code>.</li>
+  <li>The grid opens, tabular, with column headings <strong>CarrID, ConnID, Country, CityFrom, AirpFr, Country, CityTo ...</strong>, rows you can sort/filter and export.</li>
+</ol>
+<p>Example grid content:</p>
+<div class="output">CarrID  ConnID  CityFrom     CityTo        Distance<br>LH      400     FRANKFURT    NEW YORK      6185<br>LH      402     FRANKFURT    NEW YORK      6185<br>LH      410     FRANKFURT    CAPE TOWN     6006<br>...</div>
+
+<h3>Same data as a basic list (alternative output)</h3>
+<pre><code>LOOP AT lt_flights INTO ls_flight.
+  WRITE: / ls_flight-carrid, ls_flight-connid,
+           ls_flight-cityfrom, '-&gt;', ls_flight-cityto,
+           ls_flight-distance.
+ENDLOOP.</code></pre>
+
+<h3>Line-by-line breakdown</h3>
+<table>
+  <tr><th>Line</th><th>Meaning</th></tr>
+  <tr><td><code>PARAMETERS p_city TYPE spfli-cityfrom DEFAULT 'FRANKFURT'.</code></td><td>Single input field on the selection screen, pre-filled.</td></tr>
+  <tr><td><code>PARAMETERS p_top TYPE i DEFAULT 10.</code></td><td>Numeric input for "show only the top N".</td></tr>
+  <tr><td><code>PARAMETERS p_asc AS CHECKBOX.</code></td><td>Boolean tick-box on the selection screen.</td></tr>
+  <tr><td><code>SELECT-OPTIONS s_car FOR spfli-carrid.</code></td><td>Multi-value / range input, with automatic F4 value help.</td></tr>
+  <tr><td><code>WHERE carrid IN s_car</code></td><td>Applies the whole selection (sign/option/low/high) to the query.</td></tr>
+  <tr><td><code>IF sy-subrc &lt;&gt; 0. ... EXIT.</code></td><td>Empty result &rarr; message and end the report.</td></tr>
+  <tr><td><code>IF p_asc = abap_true.</code></td><td>Reading the checkbox to decide the sort order.</td></tr>
+  <tr><td><code>SORT lt_flights BY distance ...</code></td><td>Sorting table 005-style instead of in SQL.</td></tr>
+  <tr><td><code>DELETE lt_flights TO p_top.</code></td><td>Removes all rows after position <code>p_top</code> (keeps the first N).</td></tr>
+  <tr><td><code>CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY' ...</code></td><td>Displays the result as an interactive grid.</td></tr>
+</table>
+
+<h2>3. Practice</h2>
+<ol>
+  <li>Add <code>PARAMETERS p_min TYPE i DEFAULT 1000.</code> and only keep flights with <code>distance &gt;= p_min</code> (add to the <code>WHERE</code>).</li>
+  <li>Instead of <code>cityfrom</code>, select flights to a destination: <code>PARAMETERS p_city TYPE spfli-cityto DEFAULT 'NEW YORK'.</code></li>
+  <li>Replace the ALV call with the <code>LOOP ... WRITE</code> list version and run it.</li>
+  <li>Test with <code>s_car</code>: enter <code>LH</code> only, then <code>LH</code>..<code>AA</code> as a range, then exclude one value using the traffic-light column.</li>
+</ol>
+<pre><code>SELECT * FROM spfli
+       INTO TABLE lt_flights
+       WHERE carrid IN s_car
+         AND distance &gt;= p_min
+         AND cityto = p_city.</code></pre>
+
+<div style="margin-top:40px; border-top:1px solid #d1d9e0; padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+  <a href="007_Open_SQL.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">&larr; Previous: SQL (Open SQL)</a>
+  <span style="font-weight:bold; color:#68778d;">Next: coming soon &rarr;</span>
+</div>
+
+</body>
+</html>

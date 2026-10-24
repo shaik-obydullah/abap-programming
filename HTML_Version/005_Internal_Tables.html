@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>005 - Internal Tables in ABAP</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 860px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #1f2d3d; background: #f7f9fb; }
+  h1 { color: #0d6efd; border-bottom: 3px solid #0d6efd; padding-bottom: 8px; }
+  h2 { color: #0a58ca; margin-top: 32px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; background: #fff; }
+  th, td { border: 1px solid #d1d9e0; padding: 8px 12px; text-align: left; }
+  th { background: #0d6efd; color: #fff; }
+  tr:nth-child(even) { background: #f0f6fc; }
+  pre { background: #0f172a; color: #dbeafe; padding: 16px; border-radius: 8px; overflow-x: auto; }
+  code { background: #e8f0fe; color: #0d47a1; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .output { background: #fffbe6; border: 1px dashed #e6c200; padding: 12px 16px; border-radius: 6px; font-family: Consolas, monospace; color: #333; }
+  .note { background: #e7f7ee; border-left: 4px solid #20c997; padding: 10px 14px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Structures &amp; Internal Tables in ABAP</h1>
+
+<h2>1. Theory</h2>
+
+<h3>What is a Structure?</h3>
+<p>A <strong>structure</strong> bundles several fields into one object. You access the fields with a dash <code>-</code>.</p>
+<pre><code>DATA: BEGIN OF ls_person,
+        name TYPE string,
+        age  TYPE i,
+        city TYPE string,
+      END OF ls_person.
+
+ls_person-name = 'Shaik'.
+ls_person-age  = 25.
+WRITE: / ls_person-name, ls_person-age.</code></pre>
+<p>The <code>BEGIN OF ... END OF</code> block creates a structure data object. Tip: prefer defining it as a <strong>type</strong> first so it can be reused:</p>
+<pre><code>TYPES: BEGIN OF ty_person,
+         name TYPE string,
+         age  TYPE i,
+         city TYPE string,
+       END OF ty_person.
+
+DATA ls_person TYPE ty_person.</code></pre>
+<ul>
+  <li><code>TYPES</code> only <em>defines</em> the shape (no memory used yet).</li>
+  <li><code>DATA ... TYPE ty_person</code> creates an actual variable of that shape.</li>
+</ul>
+
+<h3>What is an Internal Table?</h3>
+<p>An <strong>internal table</strong> is a list kept in memory where <strong>every row has the same structure</strong>. On disk they are called <em>database tables</em> &mdash; internal tables are the same idea, but live only inside your program.</p>
+<pre><code>DATA lt_people TYPE TABLE OF ty_person.</code></pre>
+<ul>
+  <li><code>lt_</code> prefix = <strong>l</strong>ocal <strong>t</strong>able.</li>
+  <li>Empty at first &mdash; you must add rows with <code>APPEND</code>.</li>
+</ul>
+
+<h3>APPEND (add a row)</h3>
+<p>Fill a work area, then copy it into the table:</p>
+<pre><code>ls_person-name = 'Shaik'.
+ls_person-age  = 25.
+APPEND ls_person TO lt_people.</code></pre>
+<p>One <code>APPEND</code> adds one <em>copy</em> of the work area as the last row. The work area keeps its values, so refill it for each row.</p>
+
+<h3>LOOP AT (go through all rows)</h3>
+<p><code>LOOP AT ... INTO</code> walks each row and copies it into the work area:</p>
+<pre><code>LOOP AT lt_people INTO ls_person.
+  WRITE: / ls_person-name, ls_person-age.
+ENDLOOP.</code></pre>
+<ul>
+  <li>Must end with <strong><code>ENDLOOP</code></strong>.</li>
+  <li><code>sy-tabix</code> holds the current row number inside the loop (1, 2, 3...).</li>
+</ul>
+
+<h3>READ TABLE (find one row)</h3>
+<p>Searches for a matching row and <strong>returns <code>sy-subrc = 0</code> if found</strong>:</p>
+<pre><code>READ TABLE lt_people INTO ls_person WITH KEY name = 'Alice'.
+IF sy-subrc = 0.
+  WRITE: / 'Found', ls_person-city.
+ELSE.
+  WRITE: / 'Not found'.
+ENDIF.</code></pre>
+
+<h3>SORT (order the rows)</h3>
+<p>Sorts the table in place:</p>
+<pre><code>SORT lt_people BY age.
+SORT lt_people BY name DESCENDING.</code></pre>
+
+<h3>LINES (how many rows?)</h3>
+<p>Built-in function returning the row count:</p>
+<pre><code>WRITE: / 'Total people', lines( lt_people ).</code></pre>
+
+<h3>Common table commands at a glance</h3>
+<table>
+  <tr><th>Command</th><th>What it does</th></tr>
+  <tr><td><code>APPEND wa TO itab.</code></td><td>Adds a copy of wa as the last row</td></tr>
+  <tr><td><code>INSERT wa INTO itab INDEX 1.</code></td><td>Adds a row at a specific position</td></tr>
+  <tr><td><code>LOOP AT itab INTO wa.</code></td><td>Processes each row one by one</td></tr>
+  <tr><td><code>READ TABLE itab INTO wa WITH KEY f = v.</code></td><td>Finds the first matching row</td></tr>
+  <tr><td><code>MODIFY itab FROM wa INDEX 3.</code></td><td>Changes the row at position 3</td></tr>
+  <tr><td><code>DELETE itab INDEX 3.</code></td><td>Removes the row at position 3</td></tr>
+  <tr><td><code>SORT itab BY field.</code></td><td>Sorts the rows</td></tr>
+  <tr><td><code>CLEAR itab.</code></td><td>Removes all rows</td></tr>
+</table>
+
+<h2>2. Code</h2>
+
+<pre><code>REPORT ztables.
+
+TYPES: BEGIN OF ty_person,
+         name TYPE string,
+         age  TYPE i,
+         city TYPE string,
+       END OF ty_person.
+
+DATA ls_person TYPE ty_person.
+DATA lt_people TYPE TABLE OF ty_person.
+
+ls_person-name = 'Shaik'.
+ls_person-age  = 25.
+ls_person-city = 'Hyderabad'.
+APPEND ls_person TO lt_people.
+
+ls_person-name = 'Alice'.
+ls_person-age  = 30.
+ls_person-city = 'Bengaluru'.
+APPEND ls_person TO lt_people.
+
+ls_person-name = 'Bob'.
+ls_person-age  = 22.
+ls_person-city = 'Chennai'.
+APPEND ls_person TO lt_people.
+
+WRITE: / 'Total people:', lines( lt_people ).
+
+WRITE: / '--- All rows ---'.
+LOOP AT lt_people INTO ls_person.
+  WRITE: / sy-tabix, ls_person-name, '|', ls_person-age, '|', ls_person-city.
+ENDLOOP.
+
+WRITE: / '--- Find Alice ---'.
+READ TABLE lt_people INTO ls_person WITH KEY name = 'Alice'.
+IF sy-subrc = 0.
+  WRITE: / 'Found', ls_person-name, 'age', ls_person-age, 'in', ls_person-city.
+ELSE.
+  WRITE: / 'Not found'.
+ENDIF.
+
+WRITE: / '--- Sorted by age (ascending) ---'.
+SORT lt_people BY age.
+LOOP AT lt_people INTO ls_person.
+  WRITE: / ls_person-name, '|', ls_person-age.
+ENDLOOP.
+
+WRITE: / '--- Sorted by name (descending) ---'.
+SORT lt_people BY name DESCENDING.
+LOOP AT lt_people INTO ls_person.
+  WRITE: / ls_person-name, '|', ls_person-age.
+ENDLOOP.</code></pre>
+
+<h3>Output</h3>
+<div class="output">Total people:          3<br>--- All rows ---<br>         1 Shaik |          25 | Hyderabad<br>         2 Alice |          30 | Bengaluru<br>         3 Bob   |          22 | Chennai<br>--- Find Alice ---<br>Found Alice age          30 in Bengaluru<br>--- Sorted by age (ascending) ---<br>Bob   |          22<br>Shaik |          25<br>Alice |          30<br>--- Sorted by name (descending) ---<br>Shaik |          25<br>Bob   |          22<br>Alice |          30</div>
+
+<h3>Line-by-line breakdown</h3>
+<table>
+  <tr><th>Line</th><th>Meaning</th></tr>
+  <tr><td><code>TYPES: BEGIN OF ty_person, ... END OF ty_person.</code></td><td>Defines the <em>shape</em> of one row.</td></tr>
+  <tr><td><code>DATA lt_people TYPE TABLE OF ty_person.</code></td><td>Creates an empty internal table whose rows are <code>ty_person</code>.</td></tr>
+  <tr><td><code>ls_person-name = 'Shaik'.</code></td><td>Fills one field of the work area.</td></tr>
+  <tr><td><code>APPEND ls_person TO lt_people.</code></td><td>Copies the work area into the table as a new last row.</td></tr>
+  <tr><td><code>LOOP AT lt_people INTO ls_person.</code></td><td>Repeats once per row, loading each row into the work area.</td></tr>
+  <tr><td><code>sy-tabix</code></td><td>Row number of the current loop pass (starts at 1).</td></tr>
+  <tr><td><code>READ TABLE ... WITH KEY name = 'Alice'.</code></td><td>Looks up a row; <code>sy-subrc = 0</code> means found.</td></tr>
+  <tr><td><code>SORT lt_people BY age.</code></td><td>Sorts rows by age, smallest first.</td></tr>
+  <tr><td><code>SORT ... BY name DESCENDING.</code></td><td>Sorts in reverse alphabetical order.</td></tr>
+  <tr><td><code>lines( lt_people )</code></td><td>Returns the number of rows in the table.</td></tr>
+</table>
+
+<h2>3. Practice</h2>
+<ol>
+  <li>Add a 4th person (e.g. <code>Diana</code>, 35, <code>Pune</code>) with <code>APPEND</code> and print all rows again.</li>
+  <li>Use <code>READ TABLE</code> to find the youngest person and print their name and age.</li>
+  <li>Loop over the table and count how many people are older than 25:</li>
+</ol>
+<pre><code>DATA lv_count TYPE i.
+lv_count = 0.
+LOOP AT lt_people INTO ls_person.
+  IF ls_person-age > 25.
+    lv_count = lv_count + 1.
+  ENDIF.
+ENDLOOP.
+WRITE: / 'People older than 25:', lv_count.</code></pre>
+
+<div style="margin-top:40px; border-top:1px solid #d1d9e0; padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+  <a href="004_Loops.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">&larr; Previous: Loops</a>
+  <a href="006_String_Handling.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">Next: String Handling &rarr;</a>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>007 - SQL (Open SQL) in ABAP</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 860px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #1f2d3d; background: #f7f9fb; }
+  h1 { color: #0d6efd; border-bottom: 3px solid #0d6efd; padding-bottom: 8px; }
+  h2 { color: #0a58ca; margin-top: 32px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; background: #fff; }
+  th, td { border: 1px solid #d1d9e0; padding: 8px 12px; text-align: left; }
+  th { background: #0d6efd; color: #fff; }
+  tr:nth-child(even) { background: #f0f6fc; }
+  pre { background: #0f172a; color: #dbeafe; padding: 16px; border-radius: 8px; overflow-x: auto; }
+  code { background: #e8f0fe; color: #0d47a1; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .output { background: #fffbe6; border: 1px dashed #e6c200; padding: 12px 16px; border-radius: 6px; font-family: Consolas, monospace; color: #333; }
+  .note { background: #e7f7ee; border-left: 4px solid #20c997; padding: 10px 14px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>SQL (Open SQL) in ABAP</h1>
+
+<h2>1. Theory</h2>
+
+<h3>What is Open SQL?</h3>
+<p>Open SQL is SAP's own SQL dialect. It works <strong>identically on every database</strong> (HANA, Oracle, DB2, SQL Server) because the system translates it in the background. You use it to read and change data in SAP's dictionary (DDIC) tables from inside your ABAP program.</p>
+<p>Key rules:</p>
+<ul>
+  <li>Every statement ends with a period <code>.</code></li>
+  <li>Keywords are uppercase by convention (not required)</li>
+  <li>Results are stored in <strong>internal tables</strong> or single work areas</li>
+  <li>The classic flight model tables are used everywhere for practice: <code>SPFLI</code> (flight schedule), <code>SCARR</code> (airlines), <code>SFLIGHT</code> (bookable flight dates)</li>
+</ul>
+
+<h3>The basic SELECT &mdash; load rows into an internal table</h3>
+<pre><code>DATA lt_flights TYPE TABLE OF spfli.
+
+SELECT * FROM spfli INTO TABLE lt_flights.</code></pre>
+<ul>
+  <li><code>SELECT *</code> means <strong>all columns</strong>.</li>
+  <li><code>INTO TABLE lt_...</code> loads <strong>many rows</strong> at once.</li>
+  <li>No <code>WHERE</code> means the whole table &mdash; fine for tiny tables, dangerous on big ones.</li>
+</ul>
+
+<h3>WHERE &mdash; filter the rows</h3>
+<pre><code>SELECT * FROM spfli INTO TABLE lt_flights
+       WHERE carrid = 'LH'
+       AND   cityfrom = 'FRANKFURT'.</code></pre>
+<p>Operators: <code>=</code> <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code> <code>&lt;&gt;</code> (not equal). Text also supports <code>LIKE</code> with <code>%</code> (any characters) and <code>_</code> (exactly one):</p>
+<pre><code>WHERE cityfrom LIKE 'FR%'        " starts with 'FR'
+WHERE carrid IN ('LH', 'AA')     " matches a list
+WHERE distance BETWEEN 3000 AND 8000</code></pre>
+<p>Combine with <code>AND</code> / <code>OR</code>; use parentheses when mixing them so the logic is clear:</p>
+<pre><code>WHERE ( carrid = 'LH' AND cityfrom = 'FRANKFURT' )
+   OR  carrid = 'AA'</code></pre>
+
+<h3>INTO &mdash; table vs. single row</h3>
+<ul>
+  <li><code>INTO TABLE lt_rows</code> &rarr; many rows.</li>
+  <li><code>INTO ls_row</code> &rarr; one row; combine with <code>SELECT SINGLE</code>.</li>
+</ul>
+
+<h3>SELECT SINGLE &mdash; exactly one row</h3>
+<pre><code>SELECT SINGLE carrid connid FROM spfli
+       INTO CORRESPONDING FIELDS OF ls_flight
+       WHERE carrid = 'LH' AND connid = '400'.</code></pre>
+<ul>
+  <li><code>sy-subrc = 0</code> means a row was found, <code>4</code> means none.</li>
+</ul>
+
+<h3>Specific columns + CORRESPONDING FIELDS</h3>
+<p>List only the columns you need; <code>CORRESPONDING FIELDS</code> matches them by name into the target:</p>
+<pre><code>SELECT carrid connid cityfrom cityto
+       FROM spfli
+       INTO CORRESPONDING FIELDS OF TABLE lt_flights
+       WHERE cityfrom = 'NEW YORK'.</code></pre>
+
+<h3>ORDER BY / UP TO n ROWS</h3>
+<pre><code>SELECT * FROM spfli
+       INTO TABLE lt_flights
+       WHERE carrid = 'LH'
+       ORDER BY distance DESCENDING
+       UP TO 10 ROWS.</code></pre>
+<p><code>ASCENDING</code> is the default; <code>UP TO n ROWS</code> limits the result.</p>
+
+<h3>Aggregates &mdash; COUNT, SUM, AVG, MIN, MAX</h3>
+<pre><code>DATA lv_cnt TYPE i.
+SELECT COUNT( * ) FROM spfli INTO lv_cnt
+       WHERE carrid = 'LH'.
+
+SELECT SUM( distance ) FROM spfli INTO lv_sum
+       WHERE carrid = 'LH'.</code></pre>
+<p>The result is stored with <code>INTO</code> + a simple variable (without a table).</p>
+
+<h3>GROUP BY &mdash; one row per group</h3>
+<pre><code>SELECT carrid COUNT( * ) AS cnt
+       FROM spfli
+       INTO CORRESPONDING FIELDS OF TABLE lt_grp
+       GROUP BY carrid.</code></pre>
+<p>Each airline appears once, with the count of its flights. <code>HAVING</code> would filter groups (like <code>WHERE</code> does for rows).</p>
+
+<h3>JOIN &mdash; combine two tables</h3>
+<p>Columns are prefixed with the table name and a tilde <code>~</code>:</p>
+<pre><code>SELECT spfli~carrid spfli~connid scarr~carrname
+       FROM spfli
+       INNER JOIN scarr ON scarr~carrid = spfli~carrid
+       INTO CORRESPONDING FIELDS OF TABLE lt_join
+       WHERE spfli~carrid = 'LH'.</code></pre>
+
+<h3>sy-subrc and sy-dbcnt</h3>
+<ul>
+  <li><code>sy-subrc = 0</code> success, <code>4</code> = no rows matched.</li>
+  <li><code>sy-dbcnt</code> = number of rows processed by the last DB statement.</li>
+</ul>
+
+<h3>Modifying data (short intro)</h3>
+<pre><code>INSERT ztable FROM ls_row.          " add a row
+UPDATE ztable SET field = 'x' WHERE key = ... .   " change rows
+DELETE FROM ztable WHERE key = ... .              " remove rows
+MODIFY ztable FROM ls_row.          " insert or update</code></pre>
+<p>Modifications need <strong>Database Update Authorization</strong> and are usually done via function modules / BAPIs in real projects. This lesson focuses on <code>SELECT</code>, which reports use all the time.</p>
+
+<h2>2. Code</h2>
+
+<pre><code>REPORT zsql.
+
+DATA ls_flight  TYPE spfli.
+DATA lt_flights TYPE TABLE OF spfli.
+DATA lv_cnt     TYPE i.
+DATA lv_sum     TYPE i.
+
+WRITE: / '--- 1. All rows (limited to 5) ---'.
+SELECT * FROM spfli UP TO 5 ROWS INTO TABLE lt_flights.
+WRITE: / 'Rows selected:', lines( lt_flights ).
+
+WRITE: / '--- 2. Filter with WHERE ---'.
+SELECT * FROM spfli INTO TABLE lt_flights
+       WHERE carrid = 'LH' AND cityfrom = 'FRANKFURT'.
+WRITE: / 'LH flights from Frankfurt -&gt;', lines( lt_flights ), 'rows'.
+
+WRITE: / '--- 3. Specific columns only ---'.
+SELECT carrid connid cityfrom cityto
+       FROM spfli
+       INTO CORRESPONDING FIELDS OF TABLE lt_flights
+       WHERE cityfrom = 'NEW YORK'.
+LOOP AT lt_flights INTO ls_flight.
+  WRITE: / ls_flight-carrid, ls_flight-connid,
+           ls_flight-cityfrom, '-&gt;', ls_flight-cityto.
+ENDLOOP.
+
+WRITE: / '--- 4. SELECT SINGLE ---'.
+SELECT SINGLE * FROM spfli INTO ls_flight
+       WHERE carrid = 'LH' AND connid = '400'.
+IF sy-subrc = 0.
+  WRITE: / 'Found:', ls_flight-carrid, ls_flight-connid,
+           ls_flight-cityfrom, '-&gt;', ls_flight-cityto,
+           'departs at', ls_flight-deptime.
+ENDIF.
+
+WRITE: / '--- 5. Aggregates ---'.
+SELECT COUNT( * ) FROM spfli INTO lv_cnt WHERE carrid = 'LH'.
+WRITE: / 'Total LH connections:', lv_cnt.
+
+SELECT SUM( distance ) FROM spfli INTO lv_sum WHERE carrid = 'LH'.
+WRITE: / 'Total LH distance:', lv_sum.
+
+WRITE: / '--- 6. GROUP BY ---'.
+DATA: BEGIN OF ls_grp,
+        carrid TYPE spfli-carrid,
+        cnt    TYPE i,
+      END OF ls_grp.
+DATA lt_grp LIKE TABLE OF ls_grp.
+
+SELECT carrid COUNT( * ) AS cnt
+       FROM spfli
+       INTO CORRESPONDING FIELDS OF TABLE lt_grp
+       GROUP BY carrid
+       ORDER BY cnt DESCENDING.
+LOOP AT lt_grp INTO ls_grp.
+  WRITE: / ls_grp-carrid, 'has', ls_grp-cnt, 'connections'.
+ENDLOOP.
+
+WRITE: / '--- 7. JOIN with SCARR ---'.
+DATA: BEGIN OF ls_join,
+        carrid   TYPE spfli-carrid,
+        connid   TYPE spfli-connid,
+        carrname TYPE scarr-carrname,
+      END OF ls_join.
+DATA lt_join LIKE TABLE OF ls_join.
+
+SELECT spfli~carrid spfli~connid scarr~carrname
+       FROM spfli
+       INNER JOIN scarr ON scarr~carrid = spfli~carrid
+       INTO CORRESPONDING FIELDS OF TABLE lt_join
+       WHERE spfli~carrid = 'LH'
+       UP TO 5 ROWS.
+LOOP AT lt_join INTO ls_join.
+  WRITE: / ls_join-carrid, ls_join-connid, '-&gt;', ls_join-carrname.
+ENDLOOP.</code></pre>
+
+<h3>Output</h3>
+<p>The numbers depend on the flight data in <strong>your</strong> system. Example from a standard demo system:</p>
+<div class="output">--- 1. All rows (limited to 5) ---<br>Rows selected:          5<br>--- 2. Filter with WHERE ---<br>LH flights from Frankfurt -&gt;          8 rows<br>--- 3. Specific columns only ---<br>AA          17 NEW YORK -&gt; SAN FRANCISCO<br>AA         218 NEW YORK -&gt; CHICAGO<br>...<br>--- 4. SELECT SINGLE ---<br>Found: LH        400 FRANKFURT -&gt; NEW YORK departs at        0730<br>--- 5. Aggregates ---<br>Total LH connections:          8<br>Total LH distance:      45524<br>--- 6. GROUP BY ---<br>LH has         8 connections<br>AA has         6 connections<br>...<br>--- 7. JOIN with SCARR ---<br>LH        400 -&gt; Lufthansa<br>LH        402 -&gt; Lufthansa</div>
+
+<h3>Line-by-line breakdown</h3>
+<table>
+  <tr><th>Line</th><th>Meaning</th></tr>
+  <tr><td><code>SELECT * FROM spfli INTO TABLE lt_flights.</code></td><td>Loads all columns of all rows into an internal table.</td></tr>
+  <tr><td><code>INTO TABLE</code></td><td>Target for many rows (internal table).</td></tr>
+  <tr><td><code>WHERE carrid = 'LH' AND cityfrom = 'FRANKFURT'.</code></td><td>Filters rows on the database &mdash; only matching rows are loaded.</td></tr>
+  <tr><td><code>INTO CORRESPONDING FIELDS OF TABLE ...</code></td><td>Fills only the fields with matching names.</td></tr>
+  <tr><td><code>SELECT SINGLE ... INTO ls_flight.</code></td><td>Reads at most one row into a work area.</td></tr>
+  <tr><td><code>COUNT( * ) ... INTO lv_cnt</code></td><td>Aggregate result into a simple variable.</td></tr>
+  <tr><td><code>GROUP BY carrid</code></td><td>Collapses rows per airline; one result row per group.</td></tr>
+  <tr><td><code>INNER JOIN scarr ON scarr~carrid = spfli~carrid</code></td><td>Combines rows that match on the key field.</td></tr>
+  <tr><td><code>spfli~carrid</code></td><td>Tilde is how you write <code>&lt;table&gt;~&lt;column&gt;</code> in Open SQL joins.</td></tr>
+  <tr><td><code>sy-subrc = 0</code></td><td>After <code>SELECT SINGLE</code>: 0 = found, 4 = not found.</td></tr>
+</table>
+
+<h2>3. Practice</h2>
+<ol>
+  <li><code>SELECT *</code> from <code>SCARR</code> into an internal table and print each airline code + name.</li>
+  <li>Count flights per airline with <code>GROUP BY carrid</code> and print each count.</li>
+  <li>Join <code>SPFLI</code> and <code>SCARR</code> for flights from your favourite city.</li>
+  <li>Find the <strong>longest</strong> flight: <code>ORDER BY distance DESCENDING UP TO 1 ROWS</code>.</li>
+</ol>
+<pre><code>DATA ls_carr  TYPE scarr.
+DATA lt_carr  TYPE TABLE OF scarr.
+
+SELECT * FROM scarr INTO TABLE lt_carr.
+LOOP AT lt_carr INTO ls_carr.
+  WRITE: / ls_carr-carrid, ls_carr-carrname.
+ENDLOOP.</code></pre>
+
+<div style="margin-top:40px; border-top:1px solid #d1d9e0; padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+  <a href="006_String_Handling.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">&larr; Previous: String Handling</a>
+  <a href="008_Reports_Selection_Screen_ALV.html" style="font-weight:bold; color:#0d6efd; text-decoration:none;">Next: Selection &amp; ALV Reports &rarr;</a>
+</div>
+
+</body>
+</html>
